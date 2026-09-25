@@ -197,6 +197,24 @@ const refreshBtn = document.getElementById('refreshBtn');
 let active = "DAX";
 const cache = {}; // { indexName: {ts, rows} }
 const CREDITS_PER_MIN = 8; // Twelve-Data-Gratislimit
+const LS_CACHE_KEY = 'md_cache_v1';
+const LS_NEXT_KEY = 'md_next_allowed_v1';
+
+function loadPersisted(){
+  try {
+    const raw = localStorage.getItem(LS_CACHE_KEY);
+    if (raw) Object.assign(cache, JSON.parse(raw));
+  } catch (e) { /* localStorage nicht verfügbar - einfach ohne Persistenz weiterlaufen */ }
+}
+function savePersisted(){
+  try { localStorage.setItem(LS_CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
+}
+function getNextAllowed(){
+  try { return parseInt(localStorage.getItem(LS_NEXT_KEY) || '0', 10); } catch (e) { return 0; }
+}
+function setNextAllowed(ts){
+  try { localStorage.setItem(LS_NEXT_KEY, String(ts)); } catch (e) {}
+}
 
 function fmt(n, d=2){ return Number(n).toLocaleString('de-DE', {minimumFractionDigits:d, maximumFractionDigits:d}); }
 
@@ -276,11 +294,24 @@ function scheduleNext(delayMs){
 async function runQueueStep(){
   const key = QUEUE[queuePos];
   const list = STOCKS[key];
+  const waitMs = Math.ceil((list.length / CREDITS_PER_MIN) * 60000 * 1.15);
+
+  const now = Date.now();
+  const nextAllowed = getNextAllowed();
+  if (now < nextAllowed) {
+    // Budget noch nicht frei (z.B. nach einem Reload) - erst zeigen, was da ist, dann später weiter.
+    if (key === active) showActive();
+    queuePos = (queuePos + 1) % QUEUE.length;
+    scheduleNext(nextAllowed - now);
+    return;
+  }
+
   refreshBtn.disabled = true;
   try {
     const rows = await fetchQuotes(list);
     rows.sort((a,b) => (b.c ?? -999) - (a.c ?? -999));
     cache[key] = {ts: Date.now(), rows};
+    savePersisted();
     if (key === active) showActive();
   } catch (e) {
     if (key === active && !cache[key]) {
@@ -289,28 +320,38 @@ async function runQueueStep(){
   } finally {
     refreshBtn.disabled = false;
   }
-  // Warteszeit passend zur Anzahl abgefragter Symbole, damit das 8-Credits/Minute-Limit nie reißt.
-  const waitMs = Math.ceil((list.length / CREDITS_PER_MIN) * 60000 * 1.15);
+  setNextAllowed(Date.now() + waitMs);
   queuePos = (queuePos + 1) % QUEUE.length;
   scheduleNext(waitMs);
 }
 
 // Manueller Refresh: nur den aktiven Tab vorziehen, Warteschlange danach normal weiterlaufen lassen.
 async function forceRefreshActive(){
+  const now = Date.now();
+  const nextAllowed = getNextAllowed();
+  if (now < nextAllowed) {
+    const secs = Math.ceil((nextAllowed - now) / 1000);
+    stateMsg(`Gratis-Limit: bitte noch ${secs}s warten …`, false);
+    return;
+  }
   refreshBtn.disabled = true;
   stateMsg('Lade Kurse …', false);
   try {
     const rows = await fetchQuotes(STOCKS[active]);
     rows.sort((a,b) => (b.c ?? -999) - (a.c ?? -999));
     cache[active] = {ts: Date.now(), rows};
+    savePersisted();
     showActive();
   } catch (e) {
     stateMsg('Kurse konnten nicht geladen werden (' + e.message + '). API-Key oder Tageslimit prüfen.', true);
   } finally {
     refreshBtn.disabled = false;
   }
+  const waitMs = Math.ceil((STOCKS[active].length / CREDITS_PER_MIN) * 60000 * 1.15);
+  setNextAllowed(Date.now() + waitMs);
 }
 
+loadPersisted();
 renderTabs();
 showActive();
 runQueueStep();
