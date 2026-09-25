@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Momentum-Übersicht</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF9F5;
+    --ink:#1C1B18;
+    --muted:#6B685F;
+    --line:#DEDACF;
+    --up:#1F6F4A;
+    --up-bg:#E7F1EA;
+    --down:#B23A2E;
+    --down-bg:#F6E9E7;
+    --accent:#C98A2C;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#17160F;
+      --ink:#F1EEE5;
+      --muted:#A8A395;
+      --line:#38352A;
+      --up:#5FBE8D;
+      --up-bg:#1D2B22;
+      --down:#E17D6E;
+      --down-bg:#332020;
+      --accent:#E0A94C;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#17160F; --ink:#F1EEE5; --muted:#A8A395; --line:#38352A;
+    --up:#5FBE8D; --up-bg:#1D2B22; --down:#E17D6E; --down-bg:#332020; --accent:#E0A94C;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Mono",monospace;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+    min-height:100%;
+  }
+  header{
+    padding:28px 20px 18px;border-bottom:1px solid var(--line);
+    max-width:920px;margin:0 auto;
+  }
+  h1{
+    font-family:"Fraunces",serif;font-weight:600;font-size:clamp(24px,4vw,34px);
+    margin:0 0 6px;letter-spacing:-0.01em;
+  }
+  .sub{color:var(--muted);font-size:13px;line-height:1.5;max-width:60ch;}
+  .notice{
+    max-width:920px;margin:16px auto 0;padding:12px 16px;
+    border:1px solid var(--accent);border-radius:2px;
+    background:color-mix(in srgb, var(--accent) 12%, var(--paper));
+    font-size:12.5px;line-height:1.55;color:var(--ink);
+  }
+  .notice b{color:var(--accent);}
+  main{max-width:920px;margin:0 auto;padding:20px 20px 60px;}
+  .tabs{
+    display:flex;gap:4px;overflow-x:auto;padding-bottom:8px;margin-bottom:18px;
+    border-bottom:1px solid var(--line);
+  }
+  .tab{
+    flex:none;background:none;border:none;cursor:pointer;
+    font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted);
+    padding:8px 12px;border-radius:2px;white-space:nowrap;
+  }
+  .tab.active{color:var(--ink);background:var(--line);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{
+    text-align:left;font-weight:500;color:var(--muted);
+    font-size:11px;text-transform:none;padding:6px 8px;border-bottom:1px solid var(--line);
+  }
+  th.num, td.num{text-align:right;}
+  td{padding:10px 8px;border-bottom:1px solid var(--line);}
+  tr:last-child td{border-bottom:none;}
+  .name{font-family:"Fraunces",serif;font-size:14.5px;color:var(--ink);}
+  .chg{font-weight:600;padding:2px 6px;border-radius:2px;display:inline-block;}
+  .chg.pos{color:var(--up);background:var(--up-bg);}
+  .chg.neg{color:var(--down);background:var(--down-bg);}
+  .bar-track{width:70px;height:6px;background:var(--line);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;}
+  .bar-fill{height:100%;}
+  .bar-fill.pos{background:var(--up);}
+  .bar-fill.neg{background:var(--down);}
+  footer{max-width:920px;margin:0 auto;padding:0 20px 40px;color:var(--muted);font-size:11.5px;line-height:1.6;}
+  @media (max-width:600px){
+    .hide-sm{display:none;}
+  }
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .refresh-btn{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink);
+    background:none;border:1px solid var(--line);border-radius:2px;padding:6px 10px;cursor:pointer;
+  }
+  .refresh-btn:disabled{opacity:0.5;cursor:default;}
+  .updated{font-size:11.5px;color:var(--muted);}
+  .state-msg{padding:14px 8px;color:var(--muted);font-size:13px;}
+  .state-msg.err{color:var(--down);}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Momentum-Übersicht</h1>
+  <div class="sub">Live-Kurse je Index, sortiert nach Tagesmomentum. Keine Prognose — eine Momentaufnahme aktueller Kursbewegung.</div>
+</header>
+
+<div class="notice">
+  <b>Live-Daten via Twelve Data.</b> Der API-Key steht im Quelltext dieser Datei — für private Nutzung unproblematisch, bei öffentlichem Teilen der Seite kann ihn jeder im Quelltext sehen und dein Gratis-Kontingent mitverbrauchen.
+</div>
+
+<main>
+  <div class="toolbar">
+    <button class="refresh-btn" id="refreshBtn" onclick="forceRefreshActive()">↻ Diesen Tab jetzt aktualisieren</button>
+    <span class="updated" id="updated"></span>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="tableWrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Aktie</th>
+          <th class="num">Kurs</th>
+          <th class="num">1&nbsp;Tag</th>
+          <th class="num hide-sm">Momentum</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</main>
+
+<footer>
+  Kursdaten via Twelve Data, ggf. leicht zeitversetzt. Kursbewegungen der Vergangenheit erlauben keinen Rückschluss auf zukünftige Entwicklung. Dies ist keine Anlageberatung.
+</footer>
+
+<script>
+// Trage hier deinen eigenen Twelve-Data-Key ein (twelvedata.com, kostenlos):
+const API_KEY = "5db63edc22334a55a145cfc0df47ad21";
+
+// Trage hier deine echte Planspiel-Depot-Liste ein (Name, Symbol, Börse).
+const STOCKS = {
+  "DAX": [
+    {n:"Rheinmetall", symbol:"RHM", exchange:"XETR"},
+    {n:"Deutsche Bank", symbol:"DBK", exchange:"XETR"},
+    {n:"Siemens Energy", symbol:"ENR", exchange:"XETR"},
+    {n:"MTU Aero Engines", symbol:"MTX", exchange:"XETR"},
+    {n:"Allianz", symbol:"ALV", exchange:"XETR"},
+    {n:"Fresenius SE", symbol:"FRE", exchange:"XETR"}
+  ],
+  "MDAX": [
+    {n:"Redcare Pharmacy", symbol:"RDC", exchange:"XETR"},
+    {n:"Hensoldt", symbol:"HAG", exchange:"XETR"},
+    {n:"CTS Eventim", symbol:"EVD", exchange:"XETR"},
+    {n:"Fielmann", symbol:"FIE", exchange:"XETR"},
+    {n:"Aurubis", symbol:"NDA", exchange:"XETR"}
+  ],
+  "TecDAX": [
+    {n:"Siemens Healthineers", symbol:"SHL", exchange:"XETR"},
+    {n:"SAP", symbol:"SAP", exchange:"XETR"},
+    {n:"Nordex", symbol:"NDX1", exchange:"XETR"},
+    {n:"Infineon", symbol:"IFX", exchange:"XETR"},
+    {n:"Qiagen", symbol:"QIA", exchange:"XETR"}
+  ],
+  "EuroStoxx50": [
+    {n:"ASML", symbol:"ASML", exchange:"Euronext"},
+    {n:"LVMH", symbol:"MC", exchange:"Euronext"},
+    {n:"Deutsche Telekom", symbol:"DTE", exchange:"XETR"},
+    {n:"TotalEnergies", symbol:"TTE", exchange:"Euronext"},
+    {n:"Sanofi", symbol:"SAN", exchange:"Euronext"}
+  ],
+  "Dow Jones": [
+    {n:"NVIDIA", symbol:"NVDA", exchange:"NASDAQ"},
+    {n:"Microsoft", symbol:"MSFT", exchange:"NASDAQ"},
+    {n:"Apple", symbol:"AAPL", exchange:"NASDAQ"},
+    {n:"Caterpillar", symbol:"CAT", exchange:"NYSE"},
+    {n:"Boeing", symbol:"BA", exchange:"NYSE"}
+  ],
+  "Nasdaq 100": [
+    {n:"Broadcom", symbol:"AVGO", exchange:"NASDAQ"},
+    {n:"Amazon", symbol:"AMZN", exchange:"NASDAQ"},
+    {n:"Meta Platforms", symbol:"META", exchange:"NASDAQ"},
+    {n:"Alphabet", symbol:"GOOGL", exchange:"NASDAQ"},
+    {n:"Tesla", symbol:"TSLA", exchange:"NASDAQ"}
+  ]
+};
+
+const tabsEl = document.getElementById('tabs');
+const rowsEl = document.getElementById('rows');
+const updatedEl = document.getElementById('updated');
+const refreshBtn = document.getElementById('refreshBtn');
+let active = "DAX";
+const cache = {}; // { indexName: {ts, rows} }
+const CREDITS_PER_MIN = 8; // Twelve-Data-Gratislimit
+
+function fmt(n, d=2){ return Number(n).toLocaleString('de-DE', {minimumFractionDigits:d, maximumFractionDigits:d}); }
+
+function renderTabs(){
+  tabsEl.innerHTML = '';
+  Object.keys(STOCKS).forEach(k=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (k===active ? ' active' : '');
+    b.textContent = k;
+    b.onclick = ()=>{ active = k; renderTabs(); showActive(); };
+    tabsEl.appendChild(b);
+  });
+}
+
+function renderRows(rows){
+  const maxAbs = Math.max(...rows.map(r=>Math.abs(r.c ?? 0)), 0.1);
+  rowsEl.innerHTML = rows.map(r=>{
+    const pos = r.c >= 0;
+    const width = Math.round((Math.abs(r.c ?? 0)/maxAbs)*100);
+    return `<tr>
+      <td class="name">${r.n}</td>
+      <td class="num" ${r.err ? `title="${r.err.replace(/"/g,'&quot;')}"` : ''}>${r.p==null ? 'n/a' : fmt(r.p)}</td>
+      <td class="num">${r.c==null ? '—' : `<span class="chg ${pos?'pos':'neg'}">${pos?'+':''}${fmt(r.c,1)}%</span>`}</td>
+      <td class="num hide-sm">
+        ${r.c==null ? '' : `<span class="bar-track"><span class="bar-fill ${pos?'pos':'neg'}" style="width:${width}%"></span></span>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function stateMsg(text, isErr){
+  rowsEl.innerHTML = `<tr><td colspan="4" class="state-msg${isErr?' err':''}">${text}</td></tr>`;
+}
+
+// Zeigt sofort, was für den aktiven Tab im Cache liegt (kein Warten, kein Fetch hier).
+function showActive(){
+  if (cache[active]) {
+    renderRows(cache[active].rows);
+    updatedEl.textContent = 'Stand: ' + new Date(cache[active].ts).toLocaleTimeString('de-DE');
+  } else {
+    stateMsg('Wird im Hintergrund geladen …', false);
+    updatedEl.textContent = '';
+  }
+}
+
+async function fetchQuotes(list){
+  const symParam = list.map(s => `${s.symbol}:${s.exchange}`).join(',');
+  const url = `https://api.twelvedata.com/quote?symbol=${encodeURIComponent(symParam)}&apikey=${API_KEY}`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (data.status === 'error' || data.code >= 400) {
+    throw new Error(data.message || 'API-Fehler');
+  }
+
+  // Bei mehreren Symbolen liefert Twelve Data ein Objekt, bei genau einem direkt die Quote.
+  const isSingle = list.length === 1;
+
+  return list.map(s => {
+    let q = isSingle ? data : (data[`${s.symbol}:${s.exchange}`] || data[s.symbol]);
+    if (!q || q.status === 'error' || q.close == null) {
+      const reason = (q && q.message) ? q.message : 'kein Ergebnis';
+      return {n:s.n, p:null, c:null, err:reason};
+    }
+    return {n:s.n, p:parseFloat(q.close), c:parseFloat(q.percent_change)};
+  });
+}
+
+const QUEUE = Object.keys(STOCKS);
+let queuePos = 0;
+let cycleRunning = false;
+
+function scheduleNext(delayMs){
+  setTimeout(runQueueStep, delayMs);
+}
+
+async function runQueueStep(){
+  const key = QUEUE[queuePos];
+  const list = STOCKS[key];
+  refreshBtn.disabled = true;
+  try {
+    const rows = await fetchQuotes(list);
+    rows.sort((a,b) => (b.c ?? -999) - (a.c ?? -999));
+    cache[key] = {ts: Date.now(), rows};
+    if (key === active) showActive();
+  } catch (e) {
+    if (key === active && !cache[key]) {
+      stateMsg('Kurse konnten nicht geladen werden (' + e.message + '). API-Key oder Tageslimit prüfen.', true);
+    }
+  } finally {
+    refreshBtn.disabled = false;
+  }
+  // Warteszeit passend zur Anzahl abgefragter Symbole, damit das 8-Credits/Minute-Limit nie reißt.
+  const waitMs = Math.ceil((list.length / CREDITS_PER_MIN) * 60000 * 1.15);
+  queuePos = (queuePos + 1) % QUEUE.length;
+  scheduleNext(waitMs);
+}
+
+// Manueller Refresh: nur den aktiven Tab vorziehen, Warteschlange danach normal weiterlaufen lassen.
+async function forceRefreshActive(){
+  refreshBtn.disabled = true;
+  stateMsg('Lade Kurse …', false);
+  try {
+    const rows = await fetchQuotes(STOCKS[active]);
+    rows.sort((a,b) => (b.c ?? -999) - (a.c ?? -999));
+    cache[active] = {ts: Date.now(), rows};
+    showActive();
+  } catch (e) {
+    stateMsg('Kurse konnten nicht geladen werden (' + e.message + '). API-Key oder Tageslimit prüfen.', true);
+  } finally {
+    refreshBtn.disabled = false;
+  }
+}
+
+renderTabs();
+showActive();
+runQueueStep();
+</script>
+</body>
+</html>
